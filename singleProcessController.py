@@ -33,7 +33,9 @@ class SingleProcessController():
 
 
     def __init__(self):
-        
+        self.__tpmSysFuncManager    :TPMSysFuncManager = TPMSysFuncManager()  #mini
+        self.__tpmSysFuncManager.initSysFuncVar() 
+        MainData.isRunningTPMProgram = True
         # config 변수 선언 ------------------------
         self.__storeId                  :int = 6
         self.__printerId                :int = 6
