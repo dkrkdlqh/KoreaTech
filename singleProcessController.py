@@ -33,17 +33,9 @@ class SingleProcessController():
 
 
     def __init__(self):
-        self.__tpmSysFuncManager    :TPMSysFuncManager = TPMSysFuncManager()  #mini
-        self.__tpmSysFuncManager.initSysFuncVar() 
-        MainData.isRunningTPMProgram = True
-        # config 변수 선언 ------------------------
-        self.__storeId                  :int = 6
-        self.__printerId                :int = 6
-        self.__trayNum                  :int = 2
-        
-
-        # 일반 변수 선언 --------------------------
-        self.__orderId                  :int        = -1
+		# config 변수 선언 ------------------------
+        self.__trayNum                  :int        = 2
+		# 일반 변수 선언 --------------------------
         self.__menuId                   :int        = -1
 
         # 센서 상태 : 감지(0), 미감지(1)
@@ -57,8 +49,14 @@ class SingleProcessController():
         
         self.__delonghi01Status         :int        = DelonghiState.NOT_READY
 
-
-
+        self.__tpmSysFuncManager    :TPMSysFuncManager = TPMSysFuncManager()  #mini
+        self.__tpmSysFuncManager.initSysFuncVar() 
+        MainData.isRunningTPMProgram = True
+        
+        self.__tpmSysFuncManager.__storeId                   = 6
+        self.__tpmSysFuncManager.__printerId                 = 6
+        
+        
 
         # 통신 변수 선언 --------------------------------------------------------
         self.__plcComm              :MelsecPLCVar = MelsecPLCVar(self.commVarEventCallback)
@@ -68,33 +66,38 @@ class SingleProcessController():
         self.__delonghi01Comm.connect("00:a0:50:31:89:32", "00035b03-58e6-07dd-021a-08123a000300", "00035b03-58e6-07dd-021a-08123a000301", "00002902-0000-1000-8000-00805f9b34fb")
         
 
+        self.__delonghi01Container  :TcpIPVar = TcpIPVar(self.commVarEventCallback)
+        self.__delonghi01Container.connect("192.168.3.121", 60000)
+  
+        self.__crcComm              :MqttVar = MqttVar(self.commVarEventCallback)
+        self.__crcComm.connect("b85b26e22ac34763bd9cc18d7f655038.s2.eu.hivemq.cloud", 8883, "admin", "201103crcBroker", ["crc/jts", "print/mbrush"])
+        self.__crcComm.setSubscribeFilter(MqttFilterData(CRCKey.KEY_STORE_ID, self.__tpmSysFuncManager.__storeId))
+ 
         # 로봇 통신 변수 선언
         # 로봇은 정면을 기준으로 좌측부터 indy7 -> UR5 -> indy7 순서로 배치됨
         self.__indy7LComm           :ModbusTCPVar = ModbusTCPVar(self.commVarEventCallback)
-        self.__indy7LComm.connect("192.168.3.100", 502)
+        self.__indy7LComm.connect("192.168.3.100", 502)#("192.168.3.101", 502)
 
-
+        ############ TEST 시 주석처리
+        self.__cupDispenser         :TcpIPVar = TcpIPVar(self.commVarEventCallback)
+        self.__cupDispenser.connect("192.168.3.111", 60000)#("192.168.3.110", 5000)
+        
+        ############ TEST 시 주석처리
         self.__indy7LGripperComm    :TcpIPVar = TcpIPVar(self.commVarEventCallback)
         self.__indy7LGripperComm.connect("192.168.3.160", 5000)
-        
-
-        self.__delonghi01Container  :TcpIPVar = TcpIPVar(self.commVarEventCallback)
-        self.__delonghi01Container.connect("192.168.3.121", 60000)
-
-
-        self.__cupDispenser         :TcpIPVar = TcpIPVar(self.commVarEventCallback)
-        self.__cupDispenser.connect("192.168.3.110", 60000)
-
-        self.__crcComm              :MqttVar = MqttVar(self.commVarEventCallback)
-        self.__crcComm.connect("b85b26e22ac34763bd9cc18d7f655038.s2.eu.hivemq.cloud", 8883, "admin", "201103crcBroker", ["crc/jts", "print/mbrush"])
-        self.__crcComm.setSubscribeFilter(MqttFilterData(CRCKey.KEY_STORE_ID, self.__storeId))
-
         self.__initGripper(self.__indy7LGripperComm)
 
-        self.__tpmSysFuncManager    :TPMSysFuncManager = TPMSysFuncManager()
-
+        
+        while True:
+            if ( 
+                self.__plcComm.isConnected()
+                and self.__delonghi01Comm.isConnected()
+                and self.__crcComm.isConnected()
+            ):
+                break   
+        CDRLog.print("[100%] Comm Complete. Thread Start ")
         # CRC 서버 통신 처리 쓰레드
-        self.__tpmSysFuncManager.runCRCCommunication(self.__crcComm, self.__storeId, self.__printerId, self.__trayNum)
+        self.__tpmSysFuncManager.runCRCCommunication(self.__crcComm, self.__tpmSysFuncManager.__storeId, self.__tpmSysFuncManager.__printerId, self.__trayNum)
         
         # 커피 제조 쓰레드
         threading.Thread(target = self.__coffeeMakingThreadHandler).start()   
@@ -119,8 +122,8 @@ class SingleProcessController():
                 break
             
             # 1. orderId 수신 ==========================================================================================================
-            if self.__orderId == -1:
-                self.__orderId = self.__tpmSysFuncManager.getCRCOrderId()    
+            if self.__tpmSysFuncManager.__orderId == -1:
+                self.__tpmSysFuncManager.__orderId = self.__tpmSysFuncManager.getCRCOrderId()    
             
             # 2. 주문 메뉴 수신 ========================================================================================================
             elif self.__menuId == -1:
@@ -130,8 +133,8 @@ class SingleProcessController():
                 # 3. orderId는 존재하나, 제조할 주문 메뉴 정보가 더 이상 존재하지 않는다면, -> 주문 완료 처리
                 if self.__menuId == -1:
 
-                    self.__tpmSysFuncManager.publishCRCOrderComplete(self.__crcComm, self.__storeId, self.__orderId)
-                    self.__orderId              = -1
+                    self.__tpmSysFuncManager.publishCRCOrderComplete(self.__crcComm, self.__tpmSysFuncManager.__storeId, self.__tpmSysFuncManager.__orderId)
+                    self.__tpmSysFuncManager.__orderId              = -1
                     self.__menuId               = -1
                     
             
@@ -195,26 +198,6 @@ class SingleProcessController():
 
 
 
-    def __keyInputThreadHandler(self):
-        '''
-        ### 프로그램 종료 키 입력 처리 쓰레드
-        '''
-        while True:
-            
-            key = input() 
-
-            if key == Config.KEY_QUIT:
-                
-                CDRLog.print("+++++++++++++++++++++++++++++++++++++++++++++++++++")    
-                CDRLog.print("TMM will be terminated. Goodbye and see you again!!")    
-                CDRLog.print("+++++++++++++++++++++++++++++++++++++++++++++++++++")   
-                MainData.isRunningTPMProgram    = False
-                
-                self.__terminateSystem()
-                break
-
-
-        CDRLog.print("============ __keyInputThread terminated...")
 
 
 
@@ -224,28 +207,24 @@ class SingleProcessController():
         '''
 
         targetVar :str = ""
-
         if data == self.__plcComm:
             targetVar = "PLC"
         elif data == self.__delonghi01Comm:
             targetVar = "1번 드롱기"
         elif data == self.__indy7LComm:
             targetVar = "Indy7L"
+        elif data == self.__indy7LGripperComm:
+            targetVar = "Indy7L_그리퍼"
         
         if eventId == Event.COMM_VAR_DISCONNECTED:
 
-            CDRLog(f"{targetVar} 통신 끊어짐")
+            CDRLog.print(f"{targetVar} 통신 끊어짐")
             self.__terminateSystem()
 
         elif eventId == Event.COMM_VAR_FAILED_TO_CONNECT:
             
-            CDRLog(f"{targetVar} 통신 연결 실패")
+            CDRLog.print(f"{targetVar} 통신 연결 실패")
             self.__terminateSystem()
-
-
-
-    def __terminateSystem(self):
-        sys.exit()
 
 
 
@@ -400,7 +379,7 @@ class SingleProcessController():
 
 
 
-
+    ##################################################################################################################################################################
 
     def __initGripper(self, gripperComm:TcpIPVar):
         '''
@@ -531,4 +510,30 @@ class SingleProcessController():
                 CDRLog.print("컵디스펜서 Ice 컵 배출 명령 전송 실패")
             else:
                 break 
+
+    def __keyInputThreadHandler(self):
+        '''
+        ### 프로그램 종료 키 입력 처리 쓰레드
+        '''
+        while True:
+            
+            key = input() 
+
+            if key == Config.KEY_QUIT:
+                
+                CDRLog.print("+++++++++++++++++++++++++++++++++++++++++++++++++++")    
+                CDRLog.print("TMM will be terminated. Goodbye and see you again!!")    
+                CDRLog.print("+++++++++++++++++++++++++++++++++++++++++++++++++++")   
+                MainData.isRunningTPMProgram    = False
+                
+                self.__terminateSystem()
+                break
+
+
+        CDRLog.print("============ __keyInputThread terminated...")
+
+
+    def __terminateSystem(self):
+        MainData.isRunningTPMProgram    = False
+        sys.exit()
         
