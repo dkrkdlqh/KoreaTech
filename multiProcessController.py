@@ -44,13 +44,9 @@ class MultiProcessController():
 
 
     def __init__(self):
-        
+        CDRLog.print("[0%] var init Start.")
         # config 변수 선언 ------------------------
-        self.__storeId                  :int = 6
-        self.__printerId                :int = 6
         self.__trayNum                  :int = 2
-        
-
         # 일반 변수 선언 --------------------------
         self.__orderId                  :int        = -1
         self.__menuIdList               :list[int]  = [-1, -1]
@@ -72,30 +68,47 @@ class MultiProcessController():
         self.__delonghi01MenuIndex      :int        = -1
         self.__delonghi02MenuIndex      :int        = -1
 
-
-
-
+        self.__tpmSysFuncManager    :TPMSysFuncManager = TPMSysFuncManager()  #mini
+        self.__tpmSysFuncManager.initSysFuncVar() 
+        MainData.isRunningTPMProgram = True
+        
+        self.__tpmSysFuncManager.__storeId                   = 6
+        self.__tpmSysFuncManager.__printerId                 = 6
+        
+        
+        CDRLog.print("[30%] Comm init Start.")
         # 통신 변수 선언 --------------------------------------------------------
         self.__plcComm              :MelsecPLCVar = MelsecPLCVar(self.commVarEventCallback)
         self.__plcComm.connect("192.168.3.60", 9988)
         
         self.__delonghi01Comm       :BLEVar = BLEVar(self.commVarEventCallback)
         self.__delonghi01Comm.connect("00:a0:50:31:89:32", "00035b03-58e6-07dd-021a-08123a000300", "00035b03-58e6-07dd-021a-08123a000301", "00002902-0000-1000-8000-00805f9b34fb")
-        
+        #("00:A0:50:3D:86:d7", "00035b03-58e6-07dd-021a-08123a000300", "00035b03-58e6-07dd-021a-08123a000301", "00002902-0000-1000-8000-00805f9b34fb")
+     
         self.__delonghi02Comm       :BLEVar = BLEVar(self.commVarEventCallback)
         self.__delonghi02Comm.connect("00:a0:50:63:19:9f", "00035b03-58e6-07dd-021a-08123a000300", "00035b03-58e6-07dd-021a-08123a000301", "00002902-0000-1000-8000-00805f9b34fb")
+        #("00:A0:50:99:0A:0E", "00035b03-58e6-07dd-021a-08123a000300", "00035b03-58e6-07dd-021a-08123a000301", "00002902-0000-1000-8000-00805f9b34fb")
+     
+        self.__delonghiContainer  :TcpIPVar = TcpIPVar(self.commVarEventCallback)
+        self.__delonghiContainer.connect("192.168.3.123", 60000)
+        
+        self.__crcComm              :MqttVar = MqttVar(self.commVarEventCallback)
+        self.__crcComm.connect("b85b26e22ac34763bd9cc18d7f655038.s2.eu.hivemq.cloud", 8883, "admin", "201103crcBroker", ["crc/jts", "print/mbrush"])
+        self.__crcComm.setSubscribeFilter(MqttFilterData(CRCKey.KEY_STORE_ID, self.__tpmSysFuncManager.__storeId))
 
+        self.__cupDispenser         :TcpIPVar = TcpIPVar(self.commVarEventCallback)
+        self.__cupDispenser.connect("192.168.3.111", 60000) #("192.168.3.110", 5000)
 
         # 로봇 통신 변수 선언
         # 로봇은 정면을 기준으로 좌측부터 indy7 -> UR5 -> indy7 순서로 배치됨
         self.__indy7LComm           :ModbusTCPVar = ModbusTCPVar(self.commVarEventCallback)
-        self.__indy7LComm.connect("192.168.3.100", 502)
+        self.__indy7LComm.connect("192.168.3.100", 502)#("192.168.3.101", 502) 
 
         self.__ur5Comm              :ModbusTCPVar = ModbusTCPVar(self.commVarEventCallback)
-        self.__ur5Comm.connect("192.168.3.101", 502)
+        self.__ur5Comm.connect("192.168.3.102", 502)
 
         self.__indy7RComm           :ModbusTCPVar = ModbusTCPVar(self.commVarEventCallback)
-        self.__indy7RComm.connect("192.168.3.102", 502)
+        self.__indy7RComm.connect("192.168.3.103", 502)
 
         self.__indy7LGripperComm    :TcpIPVar = TcpIPVar(self.commVarEventCallback)
         self.__indy7LGripperComm.connect("192.168.3.160", 5000)
@@ -106,28 +119,27 @@ class MultiProcessController():
         self.__indy7RGripperComm    :TcpIPVar = TcpIPVar(self.commVarEventCallback)
         self.__indy7RGripperComm.connect("192.168.3.180", 5000)
 
-        self.__delonghi01Container  :TcpIPVar = TcpIPVar(self.commVarEventCallback)
-        self.__delonghi01Container.connect("192.168.3.121", 60000)
+        self.__tpmSysFuncManager.initDHGripperVar(self.__indy7LGripperComm)
+        self.__tpmSysFuncManager.initDHGripperVar(self.__ur5GripperComm)
+        self.__tpmSysFuncManager.initDHGripperVar(self.__indy7RGripperComm)
 
-        self.__delonghi02Container  :TcpIPVar = TcpIPVar(self.commVarEventCallback)
-        self.__delonghi02Container.connect("192.168.3.122", 60000)
-
-        self.__cupDispenser         :TcpIPVar = TcpIPVar(self.commVarEventCallback)
-        self.__cupDispenser.connect("192.168.3.110", 60000)
-
-        self.__crcComm              :MqttVar = MqttVar(self.commVarEventCallback)
-        self.__crcComm.connect("b85b26e22ac34763bd9cc18d7f655038.s2.eu.hivemq.cloud", 8883, "admin", "201103crcBroker", ["crc/jts", "print/mbrush"])
-        self.__crcComm.setSubscribeFilter(MqttFilterData(CRCKey.KEY_STORE_ID, self.__storeId))
-
-        self.__initGripper(self.__indy7LGripperComm)
-        self.__initGripper(self.__ur5GripperComm)
-        self.__initGripper(self.__indy7RGripperComm)
-
-        self.__tpmSysFuncManager    :TPMSysFuncManager = TPMSysFuncManager()
+        ############ TEST 시 주석처리
+        self.__order_UI             :TcpIPVar = TcpIPVar(self.commVarEventCallback)
+        self.__order_UI.connect("127.0.0.1", 6666)        
+          
+        CDRLog.print("[70%] Comm init Complete.")
+        while True:
+            if ( 
+                self.__plcComm.isConnected()
+                and self.__delonghi01Comm.isConnected()
+                and self.__delonghi02Comm.isConnected()
+                and self.__crcComm.isConnected()
+            ):
+                break   
 
         # CRC 서버 통신 처리 쓰레드
-        self.__tpmSysFuncManager.runCRCCommunication(self.__crcComm, self.__storeId, self.__printerId, self.__trayNum)
-        
+        self.__tpmSysFuncManager.runCRCCommunication(self.__crcComm, self.__tpmSysFuncManager.__storeId, self.__tpmSysFuncManager.__printerId, self.__trayNum)
+        CDRLog.print("[100%] Comm connect Complete. Thread Start ")
         # 커피 제조 쓰레드
         threading.Thread(target = self.__coffeeMakingThreadHandler).start()   
 
@@ -326,14 +338,14 @@ class MultiProcessController():
             # 1번 드롱기 찌꺼기 통 가득!
             if self.__delonghi01Status == DelonghiState.ERR_FULL_GROUNDS:
                 
-                self.__delonghi01Container.write("OPEN")
+                self.__delonghiContainer.write("OPEN_1")
                 time.sleep(15)
-                self.__delonghi01Container.write("CLOSE")
+                self.__delonghiContainer.write("CLOSE_1")
                 
             # 1번 드롱기 찌꺼기 통 열림!
             elif self.__delonghi01Status == DelonghiState.ERR_OPENED_GROUNDS_CONTAINER:
                 
-                self.__delonghi01Container.write("CLOSE")
+                self.__delonghiContainer.write("CLOSE_1")
 
             # 1번 드롱기 휴면 상태!    
             elif self.__delonghi01Status == DelonghiState.ERR_POWERED_OFF:
@@ -344,14 +356,14 @@ class MultiProcessController():
             # 2번 드롱기 찌꺼기 통 가득!
             if self.__delonghi02Status == DelonghiState.ERR_FULL_GROUNDS:
                 
-                self.__delonghi02Container.write("OPEN")
+                self.__delonghiContainer.write("OPEN_2")
                 time.sleep(15)
-                self.__delonghi02Container.write("CLOSE")
+                self.__delonghiContainer.write("CLOSE_2")
 
             # 2번 드롱기 찌꺼기 통 열림!
             elif self.__delonghi02Status == DelonghiState.ERR_OPENED_GROUNDS_CONTAINER:
                 
-                self.__delonghi02Container.write("CLOSE")
+                self.__delonghiContainer.write("CLOSE_2")
 
             # 2번 드롱기 휴면 상태! 
             elif self.__delonghi02Status == DelonghiState.ERR_POWERED_OFF:
@@ -361,28 +373,6 @@ class MultiProcessController():
 
             time.sleep(1)
 
-
-
-    def __keyInputThreadHandler(self):
-        '''
-        ### 프로그램 종료 키 입력 처리 쓰레드
-        '''
-        while True:
-            
-            key = input() 
-
-            if key == Config.KEY_QUIT:
-                
-                CDRLog.print("+++++++++++++++++++++++++++++++++++++++++++++++++++")    
-                CDRLog.print("TMM will be terminated. Goodbye and see you again!!")    
-                CDRLog.print("+++++++++++++++++++++++++++++++++++++++++++++++++++")   
-                MainData.isRunningTPMProgram    = False
-                
-                self.__terminateSystem()
-                break
-
-
-        CDRLog.print("============ __keyInputThread terminated...")
 
 
 
@@ -401,10 +391,16 @@ class MultiProcessController():
             targetVar = "2번 드롱기"
         elif data == self.__indy7LComm:
             targetVar = "Indy7L"
+        elif data == self.__indy7LGripperComm:
+            targetVar = "Indy7L_그리퍼"
         elif data == self.__ur5Comm:
             targetVar = "UR5"
+        elif data == self.__ur5GripperComm:
+            targetVar = "UR5그리퍼"
         elif data == self.__indy7RComm:
             targetVar = "Indy7R"
+        elif data == self.__indy7RGripperComm:
+            targetVar = "Indy7R_그리퍼"
         
         if eventId == Event.COMM_VAR_DISCONNECTED:
 
@@ -417,39 +413,30 @@ class MultiProcessController():
             self.__terminateSystem()
 
 
-
-    def __terminateSystem(self):
-        sys.exit()
-
-
-
     def __deliveryHotCup(self):
         '''
         ### indy7L이 핫 컵을 중간 거치대로 전달 
         '''
         
         # Indy7L 그리퍼 닫기
-        self.__holdGripper(self.__indy7LGripperComm) 
+        self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 컵디스펜서의 핫 음료컵을 받을 수 있는 위치로 이동
-        self.__sendIndyCmd(self.__indy7LComm, 1)
-        self.__waitUntilIndyMotionComplete(self.__indy7LComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 1)
         
         # 컵 디스펜서에서 핫 음료컵 배출
         self.__reqDispensingHotCup()
         time.sleep(3)
 
         # Indy7L이 중간 거치대에 컵을 내려놓는 위치로 이동
-        self.__sendIndyCmd(self.__indy7LComm, 21)
-        self.__waitUntilIndyMotionComplete(self.__indy7LComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 21)
 
         # Indy7L 그리퍼 열기 -> 컵은 중간 거치대에 place 
-        self.__releaseGripper(self.__indy7LGripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
         time.sleep(2)
 
         # Indy7L이 중간 거치대에서 홈 위치로 이동
-        self.__sendIndyCmd(self.__indy7LComm, 23)
-        self.__waitUntilIndyMotionComplete(self.__indy7LComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 23)
 
 
 
@@ -459,48 +446,42 @@ class MultiProcessController():
         ### indy7L이 아이스 컵을 중간 거치대로 전달     
         '''      
         # Indy7L 그리퍼 닫기
-        self.__holdGripper(self.__indy7LGripperComm) 
+        self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 컵디스펜서의 아이스 음료컵을 받을 수 있는 위치로 이동
-        self.__sendIndyCmd(self.__indy7LComm, 2)
-        self.__waitUntilIndyMotionComplete(self.__indy7LComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 2)
         
         # 컵 디스펜서에서 아이스 음료컵 배출
         self.__reqDispensingIceCup()
         time.sleep(3)
 
         # Indy7L이 거치대A에에 컵을 내려놓는 위치로 이동
-        self.__sendIndyCmd(self.__indy7LComm, 11)
-        self.__waitUntilIndyMotionComplete(self.__indy7LComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 11)
 
         # Indy7L 그리퍼 열기
-        self.__releaseGripper(self.__indy7LGripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 거치대A에 아이스 컵 잡는 위치로 이동
-        self.__sendIndyCmd(self.__indy7LComm, 13)
-        self.__waitUntilIndyMotionComplete(self.__indy7LComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 13)
 
         # Indy7L 그리퍼 닫기
-        self.__holdGripper(self.__indy7LGripperComm) 
+        self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 제빙기에 얼음 받는 위치로 이동하고 레버 밀기기
-        self.__sendIndyCmd(self.__indy7LComm, 14)
-        self.__waitUntilIndyMotionComplete(self.__indy7LComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 14)
 
         # 제빙기에서 얼음 배출. 대기하면서 컵에 얼음 받기
         time.sleep(8)
 
         # Indy7L이 중간 거치대에 컵을 내려놓는 위치로 이동
-        self.__sendIndyCmd(self.__indy7LComm, 22)
-        self.__waitUntilIndyMotionComplete(self.__indy7LComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 22)
 
         # Indy7L 그리퍼 열기 -> 컵은 중간 거치대에 place 
-        self.__releaseGripper(self.__indy7LGripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
         time.sleep(2)
 
         # Indy7L이 중간 거치대에서 홈 위치로 이동
-        self.__sendIndyCmd(self.__indy7LComm, 23)
-        self.__waitUntilIndyMotionComplete(self.__indy7LComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 23)
 
 
 
@@ -511,30 +492,27 @@ class MultiProcessController():
         ''' 
 
         # UR5 그리퍼 열기
-        self.__releaseGripper(self.__ur5GripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__ur5GripperComm) 
 
         # UR5가 홈위치에서 중간 거치대의 컵 잡는 위치로 이동
-        self.__sendURCmd(self.__ur5Comm, 1)
-        self.__waitUntilURMotionComplete(self.__ur5Comm)
+        self.__tpmSysFuncManager.sendURCmd(self.__ur5Comm, 1)
 
         # UR5 그리퍼 닫기
-        self.__holdGripper(self.__ur5GripperComm) 
+        self.__tpmSysFuncManager.holdDHGripper(self.__ur5GripperComm) 
         time.sleep(2)
 
         # UR5가 1번 드롱기에 컵을 내려놓는 위치로 이동
-        self.__sendURCmd(self.__ur5Comm, 2)
-        self.__waitUntilURMotionComplete(self.__ur5Comm)
+        self.__tpmSysFuncManager.sendURCmd(self.__ur5Comm, 2)
 
         # UR5 그리퍼 열기 -> 컵은 1번 드롱기에 place
-        self.__releaseGripper(self.__ur5GripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__ur5GripperComm) 
         time.sleep(2)
 
         # 1번 드롱기에서 아메리카노 제조 명령 전달
         self.__tpmSysFuncManager.brewDelonghiAmericano(self.__delonghi01Comm)
 
         # 커피 제조 시작과 동시에 UR5는 홈 위치로 이동
-        self.__sendURCmd(self.__ur5Comm, 3)
-        self.__waitUntilURMotionComplete(self.__ur5Comm)
+        self.__tpmSysFuncManager.sendURCmd(self.__ur5Comm, 3)
 
 
 
@@ -543,30 +521,27 @@ class MultiProcessController():
         ### UR5가 빈 컵을 중간 거치대에서 1번 드롱기로 P&P -> 1번 드롱기에서 '아이스 아메리카노' 음료 제조 시작 & UR5는 홈위치로 이동  
         '''
         # UR5 그리퍼 열기
-        self.__releaseGripper(self.__ur5GripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__ur5GripperComm) 
 
         # UR5가 홈위치에서 중간 거치대의 컵 잡는 위치로 이동
-        self.__sendURCmd(self.__ur5Comm, 1)
-        self.__waitUntilURMotionComplete(self.__ur5Comm)
+        self.__tpmSysFuncManager.sendURCmd(self.__ur5Comm, 1)
 
         # UR5 그리퍼 닫기
-        self.__holdGripper(self.__ur5GripperComm) 
+        self.__tpmSysFuncManager.holdDHGripper(self.__ur5GripperComm) 
         time.sleep(2)
 
         # UR5가 1번 드롱기에 컵을 내려놓는 위치로 이동
-        self.__sendURCmd(self.__ur5Comm, 2)
-        self.__waitUntilURMotionComplete(self.__ur5Comm)
+        self.__tpmSysFuncManager.sendURCmd(self.__ur5Comm, 2)
 
         # UR5 그리퍼 열기 -> 컵은 1번 드롱기에 place
-        self.__releaseGripper(self.__ur5GripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__ur5GripperComm) 
         time.sleep(2)
 
         # 1번 드롱기에서 에스프레소 제조 명령 전달
         self.__tpmSysFuncManager.brewDelonghiEspresso(self.__delonghi01Comm)
 
         # 커피 제조 시작과 동시에 UR5는 홈 위치로 이동
-        self.__sendURCmd(self.__ur5Comm, 3)
-        self.__waitUntilURMotionComplete(self.__ur5Comm)
+        self.__tpmSysFuncManager.sendURCmd(self.__ur5Comm, 3)
 
 
 
@@ -575,30 +550,27 @@ class MultiProcessController():
         ### Indy7R이 빈 컵을 중간 거치대에서 2번 드롱기로 P&P -> 2번 드롱기에서 '핫 아메리카노' 음료 제조 시작 & Indy7R은 홈위치로 이동   
         '''
         # Indy7 그리퍼 열기
-        self.__releaseGripper(self.__indy7RGripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__indy7RGripperComm) 
 
         # Indy7이이 홈위치에서 중간 거치대의 컵 잡는 위치로 이동
-        self.__sendIndyCmd(self.__indy7RComm, 1)
-        self.__waitUntilIndyMotionComplete(self.__indy7RComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 1)
 
         # Indy7 그리퍼 닫기
-        self.__holdGripper(self.__ur5GripperComm) 
+        self.__tpmSysFuncManager.holdDHGripper(self.__ur5GripperComm) 
         time.sleep(2)
 
         # Indy7이 1번 드롱기에 컵을 내려놓는 위치로 이동
-        self.__sendIndyCmd(self.__indy7RComm, 2)
-        self.__waitUntilIndyMotionComplete(self.__indy7RComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 2)
 
         # Indy7 그리퍼 열기 -> 컵은 1번 드롱기에 place
-        self.__releaseGripper(self.__indy7RGripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__indy7RGripperComm) 
         time.sleep(2)
 
         # 1번 드롱기에서 아메리카노 제조 명령 전달
         self.__tpmSysFuncManager.brewDelonghiAmericano(self.__delonghi01Comm)
 
         # 커피 제조 시작과 동시에 Indy7은 홈 위치로 이동
-        self.__sendIndyCmd(self.__indy7RComm, 3)
-        self.__waitUntilIndyMotionComplete(self.__indy7RComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 3)
 
 
 
@@ -607,30 +579,27 @@ class MultiProcessController():
         ### Indy7R이 빈 컵을 중간 거치대에서 2번 드롱기로 P&P -> 2번 드롱기에서 '아이스 아메리카노' 음료 제조 시작 & Indy7R은 홈위치로 이동 
         '''
         # Indy7 그리퍼 열기
-        self.__releaseGripper(self.__indy7RGripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__indy7RGripperComm) 
 
         # Indy7이이 홈위치에서 중간 거치대의 컵 잡는 위치로 이동
-        self.__sendIndyCmd(self.__indy7RComm, 1)
-        self.__waitUntilIndyMotionComplete(self.__indy7RComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 1)
 
         # Indy7 그리퍼 닫기
-        self.__holdGripper(self.__ur5GripperComm) 
+        self.__tpmSysFuncManager.holdDHGripper(self.__ur5GripperComm) 
         time.sleep(2)
 
         # Indy7이 1번 드롱기에 컵을 내려놓는 위치로 이동
-        self.__sendIndyCmd(self.__indy7RComm, 2)
-        self.__waitUntilIndyMotionComplete(self.__indy7RComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 2)
 
         # Indy7 그리퍼 열기 -> 컵은 1번 드롱기에 place
-        self.__releaseGripper(self.__indy7RGripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__indy7RGripperComm) 
         time.sleep(2)
 
         # 1번 드롱기에서 에스프레소 제조 명령 전달
         self.__tpmSysFuncManager.brewDelonghiEspresso(self.__delonghi01Comm)
 
         # 커피 제조 시작과 동시에 Indy7은 홈 위치로 이동
-        self.__sendIndyCmd(self.__indy7RComm, 3)
-        self.__waitUntilIndyMotionComplete(self.__indy7RComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 3)
 
 
 
@@ -639,27 +608,24 @@ class MultiProcessController():
         ### UR5가 음료컵을 1번 드롱기에서 픽업대B로 P&P -> UR5는 홈위치로 이동
         '''
         # UR5 그리퍼 열기
-        self.__releaseGripper(self.__ur5GripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__ur5GripperComm) 
 
         # UR5가 홈위치에서 중간 거치대의 컵 잡는 위치로 이동
-        self.__sendURCmd(self.__ur5Comm, 4)
-        self.__waitUntilURMotionComplete(self.__ur5Comm)
+        self.__tpmSysFuncManager.sendURCmd(self.__ur5Comm, 4)
 
         # UR5 그리퍼 닫기
-        self.__holdGripper(self.__ur5GripperComm) 
+        self.__tpmSysFuncManager.holdDHGripper(self.__ur5GripperComm) 
         time.sleep(2)
 
         # UR5가 픽업대B에 컵을 내려놓는 위치로 이동
-        self.__sendURCmd(self.__ur5Comm, 5)
-        self.__waitUntilURMotionComplete(self.__ur5Comm)
+        self.__tpmSysFuncManager.sendURCmd(self.__ur5Comm, 5)
 
         # UR5 그리퍼 열기 -> 컵은 픽업대B에 place
-        self.__releaseGripper(self.__ur5GripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__ur5GripperComm) 
         time.sleep(2)
 
         # UR5는 홈 위치로 이동
-        self.__sendURCmd(self.__ur5Comm, 6)
-        self.__waitUntilURMotionComplete(self.__ur5Comm)
+        self.__tpmSysFuncManager.sendURCmd(self.__ur5Comm, 6)
 
 
 
@@ -668,27 +634,24 @@ class MultiProcessController():
         ### Indy7R이 음료컵을 2번 드롱기에서 픽업대C로 P&P -> Indy7R은 홈위치로 이동
         '''
         # Indy7R 그리퍼 열기
-        self.__releaseGripper(self.__indy7RGripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__indy7RGripperComm) 
 
         # Indy7R이 홈위치에서 중간 거치대의 컵 잡는 위치로 이동
-        self.__sendIndyCmd(self.__indy7RComm, 4)
-        self.__waitUntilIndyMotionComplete(self.__indy7RComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 4)
 
         # Indy7R 그리퍼 닫기
-        self.__holdGripper(self.__indy7RGripperComm) 
+        self.__tpmSysFuncManager.holdDHGripper(self.__indy7RGripperComm) 
         time.sleep(2)
 
         # Indy7R이 픽업대C에 컵을 내려놓는 위치로 이동
-        self.__sendIndyCmd(self.__indy7RComm, 5)
-        self.__waitUntilIndyMotionComplete(self.__indy7RComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 5)
 
         # Indy7R 그리퍼 열기 -> 컵은 픽업대C에 place
-        self.__releaseGripper(self.__indy7RGripperComm) 
+        self.__tpmSysFuncManager.releaseDHGripper(self.__indy7RGripperComm) 
         time.sleep(2)
 
         # Indy7R은 홈 위치로 이동
-        self.__sendIndyCmd(self.__indy7RComm, 6)
-        self.__waitUntilIndyMotionComplete(self.__indy7RComm)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 6)
 
 
 
@@ -701,141 +664,6 @@ class MultiProcessController():
 
         if self.__curMenuIndex >= self.__trayNum:
             self.__curMenuIndex = 0
-
-
-    def __initGripper(self, gripperComm:TcpIPVar):
-        '''
-        ### 그리퍼 상태 초기화 명령
-        '''
-
-        writeTcpIpResult    :bool           = False
-
-        while MainData.isRunningTPMProgram == True:
-
-            writeTcpIpResult = gripperComm.write('01060100000149f6', 1)
-
-            if writeTcpIpResult == False:
-                time.sleep(0.1)
-                CDRLog.print("그리퍼 초기화 명령 전송 실패")
-            else:
-                break
-
-
-    def __holdGripper(self, gripperComm:TcpIPVar):
-        '''
-        ### 그리퍼 상태 초기화 명령
-        '''
-
-        writeTcpIpResult    :bool           = False
-
-        while MainData.isRunningTPMProgram == True:
-
-            writeTcpIpResult = gripperComm.write('0106010300007836', 1)
-
-            if writeTcpIpResult == False:
-                time.sleep(0.1)
-                CDRLog.print("그리퍼 hold 명령 전송 실패")
-            else:
-                break
-
-        
-    def __releaseGripper(self, gripperComm:TcpIPVar):
-        '''
-        ### 그리퍼 상태 초기화 명령
-        '''
-
-        writeTcpIpResult    :bool           = False
-
-        while MainData.isRunningTPMProgram == True:
-
-            writeTcpIpResult = gripperComm.write('0106010303E87888', 1)
-
-            if writeTcpIpResult == False:
-                time.sleep(0.1)
-                CDRLog.print("그리퍼 Release 명령 전송 실패")
-            else:
-                break
-
-
-    def __sendIndyCmd(self, indyComm:ModbusTCPVar, cmd:int):
-        '''
-        ### Indy 로봇의 모드버스 통신 write 명령 
-        '''
-
-        writeModbusResult   :bool           = False
-                
-        while MainData.isRunningTPMProgram == True:
-            
-            writeModbusResult = indyComm.write(ModbusFuncCode.WRITE_MULTI_REGISTERS, 0, cmd)
-
-            if writeModbusResult == False:
-                time.sleep(0.1)
-                CDRLog.print("Indy modbus 변수 write 실패")
-            else:
-                break
-
-
-
-    def __waitUntilIndyMotionComplete(self, indyComm:ModbusTCPVar):
-
-        time.sleep(0.1)
-
-        readModbusDataValue     :list           = None
-
-        while MainData.isRunningTPMProgram == True:
-            
-            readModbusDataValue = indyComm.read(ModbusFuncCode.READ_HOLDING_REGISTERS, 0, 1)   
-            
-            if readModbusDataValue == None:
-
-                CDRLog.print("Indy modbus 변수 read 실패")
-
-            else:
-                # 0번 주소의 값이 '0' -> Indy7이 대기중인 상태임을 의미  
-                if readModbusDataValue[0] == 0:
-                    break
-
-            time.sleep(0.1)
-
-
-
-    def __sendURCmd(self, urComm:ModbusTCPVar, cmd:int):
-
-        writeModbusResult   :bool           = False
-                
-        while MainData.isRunningTPMProgram == True:
-            
-            writeModbusResult = urComm.write(ModbusFuncCode.WRITE_MULTI_REGISTERS, 128, cmd)
-
-            if writeModbusResult == False:
-                time.sleep(0.1)
-                CDRLog.print("UR modbus 변수 write 실패")
-            else:
-                break
-
-
-
-    def __waitUntilURMotionComplete(self, urComm:ModbusTCPVar):
-
-        time.sleep(0.1)
-
-        readModbusDataValue     :list           = None
-
-        while MainData.isRunningTPMProgram == True:
-            
-            readModbusDataValue = urComm.read(ModbusFuncCode.READ_HOLDING_REGISTERS, 128, 1)   
-            
-            if readModbusDataValue == None:
-
-                CDRLog.print("UR modbus 변수 read 실패")
-
-            else:
-                # 0번 주소의 값이 '0' -> UR이 대기중인 상태임을 의미  
-                if readModbusDataValue[0] == 0:
-                    break
-
-            time.sleep(0.1)
-
 
 
     def __reqDispensingHotCup(self) :
@@ -871,4 +699,32 @@ class MultiProcessController():
                 CDRLog.print("컵디스펜서 Ice 컵 배출 명령 전송 실패")
             else:
                 break 
+            
+            
+
+
+    def __keyInputThreadHandler(self):
+        '''
+        ### 프로그램 종료 키 입력 처리 쓰레드
+        '''
+        while True:
+            
+            key = input() 
+
+            if key == Config.KEY_QUIT:
+                
+                CDRLog.print("+++++++++++++++++++++++++++++++++++++++++++++++++++")    
+                CDRLog.print("TMM will be terminated. Goodbye and see you again!!")    
+                CDRLog.print("+++++++++++++++++++++++++++++++++++++++++++++++++++")   
+                MainData.isRunningTPMProgram    = False
+                
+                self.__terminateSystem()
+                break
+
+
+        CDRLog.print("============ __keyInputThread terminated...")
+        
+    def __terminateSystem(self):
+        MainData.isRunningTPMProgram    = False
+        sys.exit()
         

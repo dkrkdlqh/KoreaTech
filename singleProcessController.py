@@ -254,7 +254,6 @@ class SingleProcessController():
 
         # Indy7L이 컵디스펜서의 핫 음료컵을 받을 수 있는 위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 1)
-        self.__tpmSysFuncManager.waitUntilIndyMotionComplete(self.__indy7LComm)
         
         # 컵 디스펜서에서 핫 음료컵 배출
         self.__reqDispensingHotCup()
@@ -262,7 +261,6 @@ class SingleProcessController():
 
         # Indy7L이 거치대A에 컵을 내려놓는 위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 11)
-        self.__tpmSysFuncManager.waitUntilIndyMotionComplete(self.__indy7LComm)
 
         # Indy7L 그리퍼 열기 -> 컵은 거치대A에 place 
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
@@ -270,14 +268,12 @@ class SingleProcessController():
 
         # Indy7L이 거치대A의 컵 잡는 위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 12)
-        self.__tpmSysFuncManager.waitUntilIndyMotionComplete(self.__indy7LComm)
 
         # Indy7L 그리퍼 닫기
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 1번 드롱기 컵 내려놓는 위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 16)
-        self.__tpmSysFuncManager.waitUntilIndyMotionComplete(self.__indy7LComm)
 
         # 1번 드롱기에서 아메리카노 제조 명령 전달 (Indy7이 컵 잡은 상태에서 제조)
         self.__tpmSysFuncManager.brewDelonghiAmericano(self.__delonghi01Comm)
@@ -297,14 +293,12 @@ class SingleProcessController():
 
         # Indy7L이 픽업대A의 컵 내려놓는 위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 17)
-        self.__tpmSysFuncManager.waitUntilIndyMotionComplete(self.__indy7LComm)
 
         # Indy7L 그리퍼 열기
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 홈위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 18)
-        self.__tpmSysFuncManager.waitUntilIndyMotionComplete(self.__indy7LComm)
 
 
 
@@ -330,7 +324,6 @@ class SingleProcessController():
 
         # Indy7L이 컵디스펜서의 핫 음료컵을 받을 수 있는 위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 1)
-        self.__tpmSysFuncManager.waitUntilIndyMotionComplete(self.__indy7LComm)
         
         # 컵 디스펜서에서 핫 음료컵 배출
         self.__reqDispensingHotCup()
@@ -338,7 +331,6 @@ class SingleProcessController():
 
         # Indy7L이 거치대A에 컵을 내려놓는 위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 11)
-        self.__tpmSysFuncManager.waitUntilIndyMotionComplete(self.__indy7LComm)
 
         # Indy7L 그리퍼 열기 -> 컵은 거치대A에 place 
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
@@ -346,14 +338,12 @@ class SingleProcessController():
 
         # Indy7L이 거치대A의 컵 잡는 위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 12)
-        self.__tpmSysFuncManager.waitUntilIndyMotionComplete(self.__indy7LComm)
 
         # Indy7L 그리퍼 닫기
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 1번 드롱기 컵 내려놓는 위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 16)
-        self.__tpmSysFuncManager.waitUntilIndyMotionComplete(self.__indy7LComm)
 
         # 1번 드롱기에서 아메리카노 제조 명령 전달 (Indy7이 컵 잡은 상태에서 제조)
         self.__tpmSysFuncManager.brewDelonghiAmericano(self.__delonghi01Comm)
@@ -373,113 +363,16 @@ class SingleProcessController():
 
         # Indy7L이 픽업대A의 컵 내려놓는 위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 17)
-        self.__tpmSysFuncManager.waitUntilIndyMotionComplete(self.__indy7LComm)
 
         # Indy7L 그리퍼 열기
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 홈위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 18)
-        self.__tpmSysFuncManager.waitUntilIndyMotionComplete(self.__indy7LComm)
 
 
 
     ##################################################################################################################################################################
-
-    # def __initGripper(self, gripperComm:TcpIPVar):
-    #     '''
-    #     ### 그리퍼 상태 초기화 명령
-    #     '''
-
-    #     writeTcpIpResult    :bool           = False
-
-    #     while MainData.isRunningTPMProgram == True:
-
-    #         writeTcpIpResult = gripperComm.write('01060100000149f6', 1)
-
-    #         if writeTcpIpResult == False:
-    #             time.sleep(0.1)
-    #             CDRLog.print("그리퍼 초기화 명령 전송 실패")
-    #         else:
-    #             break
-
-
-    # def __holdGripper(self, gripperComm:TcpIPVar):
-    #     '''
-    #     ### 그리퍼 상태 초기화 명령
-    #     '''
-
-    #     writeTcpIpResult    :bool           = False
-
-    #     while MainData.isRunningTPMProgram == True:
-
-    #         writeTcpIpResult = gripperComm.write('0106010300007836', 1)
-
-    #         if writeTcpIpResult == False:
-    #             time.sleep(0.1)
-    #             CDRLog.print("그리퍼 hold 명령 전송 실패")
-    #         else:
-    #             break
-
-        
-    # def __releaseGripper(self, gripperComm:TcpIPVar):
-    #     '''
-    #     ### 그리퍼 상태 초기화 명령
-    #     '''
-
-    #     writeTcpIpResult    :bool           = False
-
-    #     while MainData.isRunningTPMProgram == True:
-
-    #         writeTcpIpResult = gripperComm.write('0106010303E87888', 1)
-
-    #         if writeTcpIpResult == False:
-    #             time.sleep(0.1)
-    #             CDRLog.print("그리퍼 Release 명령 전송 실패")
-    #         else:
-    #             break
-
-
-    # def __sendIndyCmd(self, indyComm:ModbusTCPVar, cmd:int):
-    #     '''
-    #     ### Indy 로봇의 모드버스 통신 write 명령 
-    #     '''
-
-    #     writeModbusResult   :bool           = False
-                
-    #     while MainData.isRunningTPMProgram == True:
-            
-    #         writeModbusResult = indyComm.write(ModbusFuncCode.WRITE_MULTI_REGISTERS, 0, cmd)
-
-    #         if writeModbusResult == False:
-    #             time.sleep(0.1)
-    #             CDRLog.print("Indy modbus 변수 write 실패")
-    #         else:
-    #             break
-
-
-
-    # def __waitUntilIndyMotionComplete(self, indyComm:ModbusTCPVar):
-
-    #     time.sleep(0.1)
-
-    #     readModbusDataValue     :list           = None
-
-    #     while MainData.isRunningTPMProgram == True:
-            
-    #         readModbusDataValue = indyComm.read(ModbusFuncCode.READ_HOLDING_REGISTERS, 0, 1)   
-            
-    #         if readModbusDataValue == None:
-
-    #             CDRLog.print("Indy modbus 변수 read 실패")
-
-    #         else:
-    #             # 0번 주소의 값이 '0' -> Indy7이 대기중인 상태임을 의미  
-    #             if readModbusDataValue[0] == 0:
-    #                 break
-
-    #         time.sleep(0.1)
-
 
 
     def __reqDispensingHotCup(self) :
