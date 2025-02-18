@@ -3,6 +3,7 @@ import sys
 import json
 import traceback
 import time
+import datetime
 
 from queue import Queue
 
@@ -72,8 +73,8 @@ class MultiProcessController():
         self.__tpmSysFuncManager.initSysFuncVar() 
         MainData.isRunningTPMProgram = True
         
-        self.__tpmSysFuncManager.__storeId                   = 6
-        self.__tpmSysFuncManager.__printerId                 = 6
+        self.__tpmSysFuncManager.__storeId                   = 6 #7
+        self.__tpmSysFuncManager.__printerId                 = 6 #7
         
         
         CDRLog.print("[30%] Comm init Start.")
@@ -123,7 +124,6 @@ class MultiProcessController():
         self.__tpmSysFuncManager.initDHGripperVar(self.__ur5GripperComm)
         self.__tpmSysFuncManager.initDHGripperVar(self.__indy7RGripperComm)
 
-        ############ TEST 시 주석처리
         self.__order_UI             :TcpIPVar = TcpIPVar(self.commVarEventCallback)
         self.__order_UI.connect("127.0.0.1", 6666)        
           
@@ -161,7 +161,7 @@ class MultiProcessController():
 
             if MainData.isRunningTPMProgram == False:
                 break
-            
+            #CDRLog.print(f"{self.__orderId}  {self.__menuIdList} {self.__menuStateList} {self.__curMenuIndex} {self.__delonghi01MenuIndex} {self.__delonghi02MenuIndex}")
             # 1. orderId 수신 ==========================================================================================================
             if self.__orderId == -1:
                 self.__orderId = self.__tpmSysFuncManager.getCRCOrderId()    
@@ -176,7 +176,7 @@ class MultiProcessController():
             # 3. 모든 주문 메뉴 제조 완료 -> 주문 완료 처리 =============================================================================
             elif self.__menuStateList == [ORDER_STATE_PICKUP_ENABLE, ORDER_STATE_PICKUP_ENABLE]:
 
-                self.__tpmSysFuncManager.publishCRCOrderComplete(self.__crcComm, self.__storeId, self.__orderId)
+                self.__tpmSysFuncManager.publishCRCOrderComplete(self.__crcComm, self.__tpmSysFuncManager.__storeId, self.__orderId)
                 self.__orderId              = -1
                 self.__menuIdList           = [-1, -1]
                 self.__menuStateList        = [ORDER_STATE_BREW_BEFORE, ORDER_STATE_BREW_BEFORE]
@@ -209,7 +209,7 @@ class MultiProcessController():
                             self.__delonghi02MenuIndex = self.__curMenuIndex
             
                 elif self.__menuStateList[self.__curMenuIndex] == ORDER_STATE_BREW_START:
-
+                    #CDRLog.print(f"{self.__curMenuIndex} {self.__delonghi01MenuIndex}  // {self.__delonghi02MenuIndex}")
                     # 타겟 인덱스의 메뉴를 1번 드롱기에서 담당하고
                     if self.__curMenuIndex == self.__delonghi01MenuIndex:    
 
@@ -231,15 +231,21 @@ class MultiProcessController():
 
                         self.__bringCupDelonghi01ToTrayB()
                         self.__menuStateList[self.__curMenuIndex] = ORDER_STATE_PICKUP_ENABLE
+                        CDRLog.print(f"Americano Make Complete. orderId : {self.__orderId} Menu : {self.__menuIdList[self.__curMenuIndex]} ")
+                        self.UI_reset_thread(slot='b',ordernum=self.__tpmSysFuncManager.getCRCOrderNumber())
+                        # 다음 순번 메뉴로 이동
+                        self.__moveNextIndex()
 
                     # 타겟 인덱스의 메뉴를 2번 드롱기에서 담당하고, 픽업대C에 컵이 없다면 -> 음료컵을 픽업대C로 P&P
                     elif self.__curMenuIndex == self.__delonghi02MenuIndex and self.__hasCupOnPickupCTray == 0:
 
                         self.__bringCupDelonghi02ToTrayC()
                         self.__menuStateList[self.__curMenuIndex] = ORDER_STATE_PICKUP_ENABLE
+                        CDRLog.print(f"Americano Make Complete. orderId : {self.__orderId} Menu : {self.__menuIdList[self.__curMenuIndex]} ")
+                        self.UI_reset_thread(slot='c',ordernum=self.__tpmSysFuncManager.getCRCOrderNumber())
+                        # 다음 순번 메뉴로 이동
+                        self.__moveNextIndex()
 
-                # 다음 순번 메뉴로 이동
-                self.__moveNextIndex()
                 
 
             # 5. 타겟 메뉴가 '아이스 아메리카노'인 경우 =====================================================================================
@@ -289,15 +295,21 @@ class MultiProcessController():
 
                         self.__bringCupDelonghi01ToTrayB()
                         self.__menuStateList[self.__curMenuIndex] = ORDER_STATE_PICKUP_ENABLE
+                        CDRLog.print(f"Americano Make Complete. orderId : {self.__orderId} Menu : {self.__menuIdList[self.__curMenuIndex]} ")
+                        self.UI_reset_thread(slot='b',ordernum=self.__tpmSysFuncManager.getCRCOrderNumber())
+                        # 다음 순번 메뉴로 이동
+                        self.__moveNextIndex()
 
                     # 타겟 인덱스의 메뉴를 2번 드롱기에서 담당하고, 픽업대C에 컵이 없다면 -> 음료컵을 픽업대C로 P&P    
                     elif self.__curMenuIndex == self.__delonghi02MenuIndex and self.__hasCupOnPickupCTray == 0:
 
                         self.__bringCupDelonghi02ToTrayC()
                         self.__menuStateList[self.__curMenuIndex] = ORDER_STATE_PICKUP_ENABLE
+                        CDRLog.print(f"Americano Make Complete. orderId : {self.__orderId} Menu : {self.__menuIdList[self.__curMenuIndex]} ")
+                        self.UI_reset_thread(slot='c',ordernum=self.__tpmSysFuncManager.getCRCOrderNumber())
 
-                # 다음 순번 메뉴로 이동
-                self.__moveNextIndex()
+                        # 다음 순번 메뉴로 이동
+                        self.__moveNextIndex()
 
             # 6. 해당 인덱스에 타겟 메뉴가 없다면 -> 제조할 음료가 없으므로, 바로 완료 상태로 처리 ============================================
             elif self.__menuIdList[self.__curMenuIndex] == -1:  
@@ -665,10 +677,51 @@ class MultiProcessController():
         if self.__curMenuIndex >= self.__trayNum:
             self.__curMenuIndex = 0
 
+    ##################################################################################################################################################################    
+    def UI_reset_thread(self, slot : str, ordernum : int) :
+        th_ = threading.Thread(target=self.UI_reset,args=(slot,ordernum,))
+        th_.start()
+
+    def UI_reset(self, slot : str, ordernum : int) :
+        msg = '$'+slot+str(ordernum)+'%'#'$b'+str(order_num)+'%'
+
+        self.__order_UI.write(msg)
+        
+        std_time = datetime.datetime.now()
+        while True :
+            cur_time = datetime.datetime.now()
+            time_itv = cur_time - std_time
+            if time_itv.total_seconds() > 30 :
+                if slot == 'a' :
+                    if self.__hasCupOnPickupATray == 0 :
+                        msg = '$'+slot+'0%'
+                        self.__order_UI.write(msg)
+                        break
+                    else :
+                        print('There is item remaining in Slot A')
+                    
+                elif slot == 'b' :
+                    if self.__hasCupOnPickupBTray == 0 :
+                        msg = '$'+slot+'0%'
+                        self.__order_UI.write(msg)
+                        break
+                    else :
+                        print('There is item remaining in Slot B')
+                    
+                elif slot == 'c' :
+                    if self.__hasCupOnPickupCTray == 0 :
+                        msg = '$'+slot+'0%'
+                        self.__order_UI.write(msg)
+                        break
+                    else :
+                        print('There is item remaining in Slot C')
+                
+                time.sleep(1)
+
 
     def __reqDispensingHotCup(self) :
         '''
-        컵 자판기 종이컵 출력 명령
+        컵 자판기 종이컵 배출 명령
         '''
         writeTcpIpResult    :bool           = False
 
@@ -686,7 +739,7 @@ class MultiProcessController():
 
     def __reqDispensingIceCup(self) :
         '''
-        컵 자판기 플라스틱컵 출력 명령
+        컵 자판기 플라스틱컵 배출 명령
         '''
         writeTcpIpResult    :bool           = False
 
@@ -699,9 +752,6 @@ class MultiProcessController():
                 CDRLog.print("컵디스펜서 Ice 컵 배출 명령 전송 실패")
             else:
                 break 
-            
-            
-
 
     def __keyInputThreadHandler(self):
         '''
@@ -723,8 +773,8 @@ class MultiProcessController():
 
 
         CDRLog.print("============ __keyInputThread terminated...")
-        
+
+
     def __terminateSystem(self):
         MainData.isRunningTPMProgram    = False
         sys.exit()
-        

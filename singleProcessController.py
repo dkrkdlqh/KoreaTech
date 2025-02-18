@@ -1,6 +1,7 @@
 import threading
 import sys
 import time
+import datetime
 
 from variable.bleVar import BLEVar
 from variable.melsecPLCVar import MelsecPLCVar
@@ -55,8 +56,8 @@ class SingleProcessController():
         self.__tpmSysFuncManager.initSysFuncVar() 
         MainData.isRunningTPMProgram = True
         
-        self.__tpmSysFuncManager.__storeId                   = 6
-        self.__tpmSysFuncManager.__printerId                 = 6
+        self.__tpmSysFuncManager.__storeId                   = 6 #7
+        self.__tpmSysFuncManager.__printerId                 = 6 #7
         
         
         CDRLog.print("[30%] Comm init Start.")
@@ -89,7 +90,7 @@ class SingleProcessController():
         self.__indy7LGripperComm.connect("192.168.3.160", 5000)
         self.__tpmSysFuncManager.initDHGripperVar(self.__indy7LGripperComm)    
         
-        # ############ TEST 시 주석처리
+        
         self.__order_UI             :TcpIPVar = TcpIPVar(self.commVarEventCallback)
         self.__order_UI.connect("127.0.0.1", 6666)          
         CDRLog.print("[70%] Comm init Complete.")
@@ -237,6 +238,7 @@ class SingleProcessController():
         '''
         ### indy7L이 핫 음료를 제조 
         '''
+        CDRLog.print(f"make hot Americano start")
         
         while True:
 
@@ -299,8 +301,11 @@ class SingleProcessController():
 
         # Indy7L이 홈위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 18)
-
-
+        
+        
+        CDRLog.print(f"Hot Americano Make Complete. orderId : {self.__tpmSysFuncManager.getCRCOrderNumber()} ")
+        self.UI_reset_thread(slot='a',ordernum = self.__tpmSysFuncManager.getCRCOrderNumber())
+		self.__menuId               = -1
 
 
 
@@ -322,11 +327,11 @@ class SingleProcessController():
         # Indy7L 그리퍼 닫기
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
-        # Indy7L이 컵디스펜서의 핫 음료컵을 받을 수 있는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 1)
+        # Indy7L이 컵디스펜서의 아이스 음료컵을 받을 수 있는 위치로 이동
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 2)
         
-        # 컵 디스펜서에서 핫 음료컵 배출
-        self.__reqDispensingHotCup()
+        # 컵 디스펜서에서 아이스 음료컵 배출
+        self.__reqDispensingIceCup()
         time.sleep(3)
 
         # Indy7L이 거치대A에 컵을 내려놓는 위치로 이동
@@ -335,15 +340,26 @@ class SingleProcessController():
         # Indy7L 그리퍼 열기 -> 컵은 거치대A에 place 
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
         time.sleep(2)
+        
+        
 
         # Indy7L이 거치대A의 컵 잡는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 12)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 13)
 
         # Indy7L 그리퍼 닫기
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
+        # Indy7L이 제빙기로 이동
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 14)
+        
+        # 얼음 추출 대기
+        time.sleep(5)
+
+        # Indy7L 그리퍼 닫기
+        #self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
+
         # Indy7L이 1번 드롱기 컵 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 16)
+        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 15)
 
         # 1번 드롱기에서 아메리카노 제조 명령 전달 (Indy7이 컵 잡은 상태에서 제조)
         self.__tpmSysFuncManager.brewDelonghiAmericano(self.__delonghi01Comm)
@@ -370,9 +386,53 @@ class SingleProcessController():
         # Indy7L이 홈위치로 이동
         self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 18)
 
+        
+        CDRLog.print(f"ICE Americano Make Complete. orderId : {self.__tpmSysFuncManager.getCRCOrderNumber()} ")
+        self.UI_reset_thread(slot='a',ordernum=self.__tpmSysFuncManager.getCRCOrderNumber())     
+        self.__menuId               = -1
+
 
 
     ##################################################################################################################################################################
+    def UI_reset_thread(self, slot : str, ordernum : int) :
+        th_ = threading.Thread(target=self.UI_reset,args=(slot,ordernum,))
+        th_.start()
+
+    def UI_reset(self, slot : str, ordernum : int) :
+        msg = '$'+slot+str(ordernum)+'%'#'$b'+str(order_num)+'%'
+
+        self.__order_UI.write(msg)
+        
+        std_time = datetime.datetime.now()
+        while True :
+            cur_time = datetime.datetime.now()
+            time_itv = cur_time - std_time
+            if time_itv.total_seconds() > 30 :
+                if slot == 'a' :
+                    if self.__hasCupOnPickupATray == 0 :
+                        msg = '$'+slot+'0%'
+                        self.__order_UI.write(msg)
+                        break
+                    else :
+                        print('There is item remaining in Slot A')
+                    
+                elif slot == 'b' :
+                    if self.__hasCupOnPickupBTray == 0 :
+                        msg = '$'+slot+'0%'
+                        self.__order_UI.write(msg)
+                        break
+                    else :
+                        print('There is item remaining in Slot B')
+                    
+                elif slot == 'c' :
+                    if self.__hasCupOnPickupCTray == 0 :
+                        msg = '$'+slot+'0%'
+                        self.__order_UI.write(msg)
+                        break
+                    else :
+                        print('There is item remaining in Slot C')
+                
+                time.sleep(1)
 
 
     def __reqDispensingHotCup(self) :
