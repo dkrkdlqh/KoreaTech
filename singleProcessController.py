@@ -37,6 +37,13 @@ class SingleProcessController():
         CDRLog.print("[0%] var init Start.")
 		# config 변수 선언 ------------------------
         self.__trayNum                  :int        = 2
+        
+        self.__indyCmdAddr              :int        = 0
+        self.__indyFeedbackAddr         :int        = 1
+        self.__indyStartFeedback        :int        = 100
+        self.__indtFinFeedback          :int        = 0
+        
+        
 		# 일반 변수 선언 --------------------------
         self.__orderId                  :int        = -1##
         self.__menuId                   :int        = -1
@@ -255,27 +262,27 @@ class SingleProcessController():
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 컵디스펜서의 핫 음료컵을 받을 수 있는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 1)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 1, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
         
         # 컵 디스펜서에서 핫 음료컵 배출
         self.__reqDispensingHotCup()
         time.sleep(3)
 
         # Indy7L이 거치대A에 컵을 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 11)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 11, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 열기 -> 컵은 거치대A에 place 
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
         time.sleep(2)
 
         # Indy7L이 거치대A의 컵 잡는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 12)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 12, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 닫기
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 1번 드롱기 컵 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 16)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 16, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # 1번 드롱기에서 아메리카노 제조 명령 전달 (Indy7이 컵 잡은 상태에서 제조)
         self.__tpmSysFuncManager.brewDelonghiAmericano(self.__delonghi01Comm)
@@ -294,18 +301,18 @@ class SingleProcessController():
             time.sleep(1)
 
         # Indy7L이 픽업대A의 컵 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 17)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 17, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 열기
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 홈위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 18)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 18, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
         
         
         CDRLog.print(f"Hot Americano Make Complete. orderId : {self.__tpmSysFuncManager.getCRCOrderNumber()} ")
         self.UI_reset_thread(slot='a',ordernum = self.__tpmSysFuncManager.getCRCOrderNumber())
-		self.__menuId               = -1
+        self.__menuId               = -1
 
 
 
@@ -328,14 +335,14 @@ class SingleProcessController():
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 컵디스펜서의 아이스 음료컵을 받을 수 있는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 2)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 2, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
         
         # 컵 디스펜서에서 아이스 음료컵 배출
         self.__reqDispensingIceCup()
         time.sleep(3)
 
         # Indy7L이 거치대A에 컵을 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 11)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 11, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 열기 -> 컵은 거치대A에 place 
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
@@ -344,13 +351,13 @@ class SingleProcessController():
         
 
         # Indy7L이 거치대A의 컵 잡는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 13)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 13, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 닫기
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 제빙기로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 14)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 14, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
         
         # 얼음 추출 대기
         time.sleep(5)
@@ -359,7 +366,7 @@ class SingleProcessController():
         #self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 1번 드롱기 컵 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 15)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 15, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # 1번 드롱기에서 아메리카노 제조 명령 전달 (Indy7이 컵 잡은 상태에서 제조)
         self.__tpmSysFuncManager.brewDelonghiAmericano(self.__delonghi01Comm)
@@ -378,13 +385,13 @@ class SingleProcessController():
             time.sleep(1)
 
         # Indy7L이 픽업대A의 컵 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 17)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 17, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 열기
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 홈위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 18)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 18, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         
         CDRLog.print(f"ICE Americano Make Complete. orderId : {self.__tpmSysFuncManager.getCRCOrderNumber()} ")
