@@ -48,7 +48,7 @@ class SingleProcessController():
         self.__orderId                  :int        = -1##
         self.__menuId                   :int        = -1
 
-        # 센서 상태 : 감지(0), 미감지(1)
+        # 센서 상태 : 감지(1), 미감지(0)
         self.__hasCupOnMiddleATray      :int        = 1
         self.__hasCupOnMiddleBTray      :int        = 1
         self.__hasCupOnDeloghi01Tray    :int        = 1
@@ -59,12 +59,12 @@ class SingleProcessController():
         
         self.__delonghi01Status         :int        = DelonghiState.NOT_READY
 
-        self.__tpmSysFuncManager    :TPMSysFuncManager = TPMSysFuncManager()  #mini
+        self.__tpmSysFuncManager    :TPMSysFuncManager = TPMSysFuncManager() 
         self.__tpmSysFuncManager.initSysFuncVar() 
         MainData.isRunningTPMProgram = True
         
-        self.__tpmSysFuncManager.__storeId                   = 6 #7
-        self.__tpmSysFuncManager.__printerId                 = 6 #7
+        self.__tpmSysFuncManager.__storeId                   = 7
+        self.__tpmSysFuncManager.__printerId                 = 7
         
         
         CDRLog.print("[30%] Comm init Start.")
@@ -73,11 +73,10 @@ class SingleProcessController():
         self.__plcComm.connect("192.168.3.60", 9988)
         
         self.__delonghi01Comm       :BLEVar = BLEVar(self.commVarEventCallback)
-        self.__delonghi01Comm.connect("00:a0:50:31:89:32", "00035b03-58e6-07dd-021a-08123a000300", "00035b03-58e6-07dd-021a-08123a000301", "00002902-0000-1000-8000-00805f9b34fb")
-        #("00:A0:50:3D:86:d7", "00035b03-58e6-07dd-021a-08123a000300", "00035b03-58e6-07dd-021a-08123a000301", "00002902-0000-1000-8000-00805f9b34fb")
+        self.__delonghi01Comm.connect("00:A0:50:3D:86:d7", "00035b03-58e6-07dd-021a-08123a000300", "00035b03-58e6-07dd-021a-08123a000301", "00002902-0000-1000-8000-00805f9b34fb")
 
         self.__delonghiContainer  :TcpIPVar = TcpIPVar(self.commVarEventCallback)
-        self.__delonghiContainer.connect("192.168.3.121", 60000)#("192.168.3.123", 60000)
+        self.__delonghiContainer.connect("192.168.3.123", 60000)
   
         self.__crcComm              :MqttVar = MqttVar(self.commVarEventCallback)
         self.__crcComm.connect("b85b26e22ac34763bd9cc18d7f655038.s2.eu.hivemq.cloud", 8883, "admin", "201103crcBroker", ["crc/jts", "print/mbrush"])
@@ -85,12 +84,12 @@ class SingleProcessController():
         
         ############ TEST 시 주석처리
         self.__cupDispenser         :TcpIPVar = TcpIPVar(self.commVarEventCallback)
-        self.__cupDispenser.connect("192.168.3.111", 60000) #("192.168.3.110", 5000)
+        self.__cupDispenser.connect("192.168.3.110", 5000)
         
         # 로봇 통신 변수 선언
         # 로봇은 정면을 기준으로 좌측부터 indy7 -> UR5 -> indy7 순서로 배치됨
         self.__indy7LComm           :ModbusTCPVar = ModbusTCPVar(self.commVarEventCallback)
-        self.__indy7LComm.connect("192.168.3.100", 502)#("192.168.3.101", 502)
+        self.__indy7LComm.connect("192.168.3.101", 502)
 
         ############ TEST 시 주석처리
         self.__indy7LGripperComm    :TcpIPVar = TcpIPVar(self.commVarEventCallback)
@@ -184,16 +183,16 @@ class SingleProcessController():
             self.__hasCupOnMiddleBTray      = sensorStateList[1]
             self.__hasCupOnDeloghi01Tray    = sensorStateList[2]
             self.__hasCupOnDeloghi02Tray    = sensorStateList[3]
-            self.__hasCupOnPickupATray      = sensorStateList[4]
-            self.__hasCupOnPickupBTray      = sensorStateList[5]
-            self.__hasCupOnPickupCTray      = sensorStateList[6]
+            self.__hasCupOnPickupATray      = sensorStateList[6]#[4]
+            self.__hasCupOnPickupBTray      = sensorStateList[4]#[5]
+            self.__hasCupOnPickupCTray      = sensorStateList[5]#[6]
 
 
             # 1번 드롱기 찌꺼기 통 가득!
             if self.__delonghi01Status == DelonghiState.ERR_FULL_GROUNDS:
                 
                 self.__delonghiContainer.write("OPEN_1")
-                time.sleep(15)
+                time.sleep(10)
                 self.__delonghiContainer.write("CLOSE_1")
                 
             # 1번 드롱기 찌꺼기 통 열림!
@@ -266,17 +265,17 @@ class SingleProcessController():
         
         # 컵 디스펜서에서 핫 음료컵 배출
         self.__reqDispensingHotCup()
-        time.sleep(3)
+        #time.sleep(3)
 
         # Indy7L이 거치대A에 컵을 내려놓는 위치로 이동
         self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 11, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 열기 -> 컵은 거치대A에 place 
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
-        time.sleep(2)
+        #time.sleep(2)
 
         # Indy7L이 거치대A의 컵 잡는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 12, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
+        #self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 12, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 닫기
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
@@ -339,20 +338,15 @@ class SingleProcessController():
         
         # 컵 디스펜서에서 아이스 음료컵 배출
         self.__reqDispensingIceCup()
-        time.sleep(3)
+        #time.sleep(3)
 
         # Indy7L이 거치대A에 컵을 내려놓는 위치로 이동
         self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 11, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 열기 -> 컵은 거치대A에 place 
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
-        time.sleep(2)
+        #time.sleep(2)
         
-        
-
-        # Indy7L이 거치대A의 컵 잡는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 13, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
-
         # Indy7L 그리퍼 닫기
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
@@ -360,16 +354,14 @@ class SingleProcessController():
         self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 14, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
         
         # 얼음 추출 대기
-        time.sleep(5)
+        time.sleep(8)
 
-        # Indy7L 그리퍼 닫기
-        #self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 1번 드롱기 컵 내려놓는 위치로 이동
         self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 15, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # 1번 드롱기에서 아메리카노 제조 명령 전달 (Indy7이 컵 잡은 상태에서 제조)
-        self.__tpmSysFuncManager.brewDelonghiAmericano(self.__delonghi01Comm)
+        self.__tpmSysFuncManager.brewDelonghiEspresso(self.__delonghi01Comm)
 
         time.sleep(2)
 
@@ -400,7 +392,7 @@ class SingleProcessController():
 
 
 
-    ##################################################################################################################################################################
+    ##################################################################################################################################################################    
     def UI_reset_thread(self, slot : str, ordernum : int) :
         th_ = threading.Thread(target=self.UI_reset,args=(slot,ordernum,))
         th_.start()
@@ -408,7 +400,7 @@ class SingleProcessController():
     def UI_reset(self, slot : str, ordernum : int) :
         msg = '$'+slot+str(ordernum)+'%'#'$b'+str(order_num)+'%'
 
-        self.__order_UI.write(msg)
+        self.__order_UI.write(msg,2)
         
         std_time = datetime.datetime.now()
         while True :
@@ -418,7 +410,7 @@ class SingleProcessController():
                 if slot == 'a' :
                     if self.__hasCupOnPickupATray == 0 :
                         msg = '$'+slot+'0%'
-                        self.__order_UI.write(msg)
+                        self.__order_UI.write(msg,2)
                         break
                     else :
                         print('There is item remaining in Slot A')
@@ -426,7 +418,7 @@ class SingleProcessController():
                 elif slot == 'b' :
                     if self.__hasCupOnPickupBTray == 0 :
                         msg = '$'+slot+'0%'
-                        self.__order_UI.write(msg)
+                        self.__order_UI.write(msg,2)
                         break
                     else :
                         print('There is item remaining in Slot B')
@@ -434,7 +426,7 @@ class SingleProcessController():
                 elif slot == 'c' :
                     if self.__hasCupOnPickupCTray == 0 :
                         msg = '$'+slot+'0%'
-                        self.__order_UI.write(msg)
+                        self.__order_UI.write(msg,2)
                         break
                     else :
                         print('There is item remaining in Slot C')
@@ -456,6 +448,7 @@ class SingleProcessController():
                 time.sleep(0.1)
                 CDRLog.print("컵디스펜서 Hot 컵 배출 명령 전송 실패")
             else:
+                time.sleep(3)
                 break    
 
         
@@ -474,6 +467,7 @@ class SingleProcessController():
                 time.sleep(0.1)
                 CDRLog.print("컵디스펜서 Ice 컵 배출 명령 전송 실패")
             else:
+                time.sleep(3)
                 break 
 
     def __keyInputThreadHandler(self):
