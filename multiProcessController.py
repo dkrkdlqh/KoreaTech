@@ -48,6 +48,14 @@ class MultiProcessController():
         CDRLog.print("[0%] var init Start.")
         # config 변수 선언 ------------------------
         self.__trayNum                  :int = 2
+        
+        
+        self.__indyCmdAddr              :int        = 0
+        self.__indyFeedbackAddr         :int        = 1
+        self.__indyStartFeedback        :int        = 100
+        self.__indtFinFeedback          :int        = 0
+        
+        
         # 일반 변수 선언 --------------------------
         self.__orderId                  :int        = -1
         self.__menuIdList               :list[int]  = [-1, -1]
@@ -434,21 +442,21 @@ class MultiProcessController():
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 컵디스펜서의 핫 음료컵을 받을 수 있는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 1)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 1, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
         
         # 컵 디스펜서에서 핫 음료컵 배출
         self.__reqDispensingHotCup()
         time.sleep(3)
 
         # Indy7L이 중간 거치대에 컵을 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 21)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 21, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 열기 -> 컵은 중간 거치대에 place 
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
         time.sleep(2)
 
         # Indy7L이 중간 거치대에서 홈 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 23)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 23, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
 
 
@@ -461,39 +469,39 @@ class MultiProcessController():
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 컵디스펜서의 아이스 음료컵을 받을 수 있는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 2)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 2, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
         
         # 컵 디스펜서에서 아이스 음료컵 배출
         self.__reqDispensingIceCup()
         time.sleep(3)
 
         # Indy7L이 거치대A에에 컵을 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 11)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 11, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 열기
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 거치대A에 아이스 컵 잡는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 13)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 13, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 닫기
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7LGripperComm) 
 
         # Indy7L이 제빙기에 얼음 받는 위치로 이동하고 레버 밀기기
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 14)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 14, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # 제빙기에서 얼음 배출. 대기하면서 컵에 얼음 받기
         time.sleep(8)
 
         # Indy7L이 중간 거치대에 컵을 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 22)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 22, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7L 그리퍼 열기 -> 컵은 중간 거치대에 place 
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7LGripperComm) 
         time.sleep(2)
 
         # Indy7L이 중간 거치대에서 홈 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7LComm, 23)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 23, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
 
 
@@ -565,14 +573,14 @@ class MultiProcessController():
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7RGripperComm) 
 
         # Indy7이이 홈위치에서 중간 거치대의 컵 잡는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 1)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 1, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7 그리퍼 닫기
         self.__tpmSysFuncManager.holdDHGripper(self.__ur5GripperComm) 
         time.sleep(2)
 
         # Indy7이 1번 드롱기에 컵을 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 2)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 2, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7 그리퍼 열기 -> 컵은 1번 드롱기에 place
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7RGripperComm) 
@@ -582,7 +590,7 @@ class MultiProcessController():
         self.__tpmSysFuncManager.brewDelonghiAmericano(self.__delonghi01Comm)
 
         # 커피 제조 시작과 동시에 Indy7은 홈 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 3)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 3, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
 
 
@@ -594,14 +602,14 @@ class MultiProcessController():
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7RGripperComm) 
 
         # Indy7이이 홈위치에서 중간 거치대의 컵 잡는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 1)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 1, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7 그리퍼 닫기
         self.__tpmSysFuncManager.holdDHGripper(self.__ur5GripperComm) 
         time.sleep(2)
 
         # Indy7이 1번 드롱기에 컵을 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 2)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 2, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7 그리퍼 열기 -> 컵은 1번 드롱기에 place
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7RGripperComm) 
@@ -611,7 +619,7 @@ class MultiProcessController():
         self.__tpmSysFuncManager.brewDelonghiEspresso(self.__delonghi01Comm)
 
         # 커피 제조 시작과 동시에 Indy7은 홈 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 3)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 3, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
 
 
@@ -649,21 +657,21 @@ class MultiProcessController():
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7RGripperComm) 
 
         # Indy7R이 홈위치에서 중간 거치대의 컵 잡는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 4)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 4, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7R 그리퍼 닫기
         self.__tpmSysFuncManager.holdDHGripper(self.__indy7RGripperComm) 
         time.sleep(2)
 
         # Indy7R이 픽업대C에 컵을 내려놓는 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 5)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 5, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
         # Indy7R 그리퍼 열기 -> 컵은 픽업대C에 place
         self.__tpmSysFuncManager.releaseDHGripper(self.__indy7RGripperComm) 
         time.sleep(2)
 
         # Indy7R은 홈 위치로 이동
-        self.__tpmSysFuncManager.sendIndyCmd(self.__indy7RComm, 6)
+        self.__tpmSysFuncManager.sendIndyModbusCmd(self.__indy7LComm, self.__indyCmdAddr, 6, self.__indyFeedbackAddr, self.__indyStartFeedback, self.__indtFinFeedback)
 
 
 
